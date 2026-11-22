@@ -2,14 +2,13 @@ name: Deploy portfolio to Pages
 on:
   push:
     branches: ["main"]
-    paths: ["portfolio-package.json", ".github/workflows/static.yml"]
   workflow_dispatch:
 permissions:
   contents: read
   pages: write
   id-token: write
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: false
 jobs:
   deploy:
@@ -20,36 +19,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Reassemble complete portfolio
-        run: |
-          python3 - <<'PYTHON'
-          from pathlib import Path
-          import hashlib, json, shutil, zipfile
-          manifest = json.loads(Path('portfolio-package.json').read_text())
-          parts = sorted(Path('.').glob('portfolio.part-*'))
-          assert len(parts) == manifest['parts'], 'Portfolio upload is incomplete'
-          digest = hashlib.sha256()
-          with open('/tmp/portfolio.zip', 'wb') as output:
-              for part in parts:
-                  with part.open('rb') as source:
-                      while True:
-                          chunk = source.read(1024 * 1024)
-                          if not chunk: break
-                          digest.update(chunk)
-                          output.write(chunk)
-          assert digest.hexdigest() == manifest['sha256'], 'Portfolio integrity check failed'
-          assert Path('/tmp/portfolio.zip').stat().st_size == manifest['bytes']
-          with zipfile.ZipFile('/tmp/portfolio.zip') as site:
-              site.extractall('_site')
-          assert Path('_site/index.html').is_file()
-          print('Complete portfolio reconstructed and verified.')
-          PYTHON
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      - name: Upload portfolio
+      - name: Upload website and media
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '_site'
+          path: '.'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
